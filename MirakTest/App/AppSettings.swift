@@ -46,13 +46,13 @@ final class AppSettings {
         self.defaults = defaults
         defaults.register(defaults: [
             Key.isServiceTypeFilterEnabled: true,
-            Key.networkCaching: -1,
+            Key.networkCaching: 0,
             Key.isHardwareDecodingEnabled: true,
             Key.isDualMonoAutoAdjustEnabled: true,
         ])
         baseURL = defaults.string(forKey: Key.baseURL) ?? ""
         isServiceTypeFilterEnabled = defaults.bool(forKey: Key.isServiceTypeFilterEnabled)
-        networkCaching = defaults.integer(forKey: Key.networkCaching)
+        networkCaching = max(defaults.integer(forKey: Key.networkCaching), 0)
         isHardwareDecodingEnabled = defaults.bool(forKey: Key.isHardwareDecodingEnabled)
         isDualMonoAutoAdjustEnabled = defaults.bool(forKey: Key.isDualMonoAutoAdjustEnabled)
         lastServiceID = defaults.object(forKey: Key.lastServiceID) as? Int

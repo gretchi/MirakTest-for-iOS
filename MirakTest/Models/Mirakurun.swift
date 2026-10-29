@@ -60,7 +60,7 @@ struct Program: Codable, Hashable, Identifiable {
     var startAt: Int64
     /// ミリ秒
     var duration: Int64
-    var isFree: Bool
+    var isFree: Bool?
     var name: String?
     var description: String?
     var genres: [ProgramGenre]?
@@ -104,12 +104,16 @@ enum MirakurunCompatibility: String {
     case mahiron = "Mahiron"
 }
 
-/// 番組の拡張形式イベント記述子。値が文字列でない項目は無視する
+/// 番組の拡張形式イベント記述子。オブジェクトでない場合や値が文字列でない項目は無視する
+/// (JSON のキー順は保持されないため、表示順は不定)
 struct ExtendedDescription: Codable, Hashable {
     var items: [(key: String, value: String)]
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: AnyKey.self)
+        guard let container = try? decoder.container(keyedBy: AnyKey.self) else {
+            items = []
+            return
+        }
         items = container.allKeys.compactMap { key in
             guard let value = try? container.decode(String.self, forKey: key) else { return nil }
             return (key.stringValue, value)

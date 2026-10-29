@@ -31,7 +31,7 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("ハードウェアデコードを使用する", isOn: $settings.isHardwareDecodingEnabled)
-                    Stepper(value: $settings.networkCaching, in: -1 ... 10000, step: 250) {
+                    Stepper(value: $settings.networkCaching, in: 0 ... 10000, step: 250) {
                         LabeledContent("ネットワークキャッシュ", value: settings.networkCaching <= 0 ? "既定" : "\(settings.networkCaching) ms")
                     }
                     Toggle("二ヶ国語放送で主音声を自動選択する", isOn: $settings.isDualMonoAutoAdjustEnabled)

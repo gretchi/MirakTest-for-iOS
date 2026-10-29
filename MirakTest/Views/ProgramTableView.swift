@@ -7,11 +7,11 @@ struct ProgramTableView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var selectedDay = Calendar.current.startOfDay(for: Date())
+    /// 深夜 0〜4 時は前日の番組表を開く
+    @State private var selectedDay = AppModel.broadcastDay(of: Date())
     @State private var selectedProgram: Program?
 
-    /// 番組表は 4 時を一日の始まりとする
-    private static let dayStartHour = 4
+    private static let dayStartHour = AppModel.broadcastDayStartHour
 
     private var hourHeight: CGFloat { horizontalSizeClass == .regular ? 200 : 160 }
     private var columnWidth: CGFloat { horizontalSizeClass == .regular ? 160 : 120 }
@@ -63,7 +63,8 @@ struct ProgramTableView: View {
     }
 
     private var daySelector: some View {
-        let days = model.availableDays.isEmpty ? [selectedDay] : model.availableDays
+        // 選択中の日付は必ず選択肢に含める (Picker の選択値が候補に無いと表示が崩れる)
+        let days = Set(model.availableBroadcastDays + [selectedDay]).sorted()
         return Menu {
             Picker("日付", selection: $selectedDay) {
                 ForEach(days, id: \.self) { day in
@@ -121,9 +122,7 @@ struct ProgramTableView: View {
             Color.clear.frame(width: timeColumnWidth)
             ForEach(model.services) { service in
                 HStack(spacing: 6) {
-                    ServiceLogo(service: service)
-                        .scaleEffect(0.75)
-                        .frame(width: 36)
+                    ServiceLogo(service: service, width: 36)
                     Text(service.name)
                         .font(.caption.bold())
                         .lineLimit(2)

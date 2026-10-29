@@ -83,7 +83,7 @@ struct MirakurunClient {
     }
 
     func services() async throws -> [Service] {
-        try await get("services", as: [Service].self)
+        try await get("services", as: LossyArray<Service>.self).elements
     }
 
     func logo(of service: Service) async throws -> Data {
@@ -98,10 +98,38 @@ struct MirakurunClient {
         if let serviceId {
             query.append(URLQueryItem(name: "serviceId", value: String(serviceId)))
         }
-        return try await get("programs", query: query, as: [Program].self)
+        return try await get("programs", query: query, as: LossyArray<Program>.self).elements
     }
 
     func streamURL(of service: Service) -> URL {
         baseURL.appendingPathComponent("services/\(service.id)/stream")
+    }
+}
+
+/// 一部の要素がデコードできなくても、残りの要素は取得できる配列
+/// サーバー実装 (Mirakurun / mirakc 等) の差異で 1 件不正なだけで番組表全体が消えるのを防ぐ
+private struct LossyArray<Element: Decodable>: Decodable {
+    var elements: [Element]
+
+    /// 型を問わず 1 要素を読み飛ばす
+    private struct Skip: Decodable {
+        init(from _: Decoder) throws {}
+    }
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        var elements = [Element]()
+        while !container.isAtEnd {
+            if try container.decodeNil() {
+                continue
+            }
+            if let element = try? container.decode(Element.self) {
+                elements.append(element)
+            } else if (try? container.decode(Skip.self)) == nil {
+                // 読み飛ばせない場合に無限ループしないよう打ち切る
+                break
+            }
+        }
+        self.elements = elements
     }
 }

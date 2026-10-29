@@ -76,7 +76,9 @@ private struct PlayerSurface: View {
                     // 縦方向のスワイプでサービスを切り替える
                     guard abs(value.translation.height) > abs(value.translation.width) else { return }
                     model.switchService(offset: value.translation.height < 0 ? 1 : -1)
-                }
+                },
+            // 縦スクロールする画面内では誤操作になるため、全画面表示時のみ有効にする
+            including: isFullscreen ? .all : .subviews
         )
         .onAppear(perform: scheduleHide)
     }
@@ -196,6 +198,7 @@ private struct PlayerControls: View {
                 } label: {
                     Image(systemName: "camera")
                 }
+                .disabled(!player.isPlaying)
                 .accessibilityLabel("スクリーンショット")
                 if UIDevice.current.userInterfaceIdiom == .pad {
                     Button {
@@ -292,24 +295,31 @@ private struct PlayerControls: View {
     }
 }
 
-/// スクリーンショット保存後に一時的に表示するサムネイル
+/// スクリーンショットの保存結果を一時的に表示する
 private struct SnapshotToast: View {
     @Environment(PlayerController.self) private var player
 
     var body: some View {
-        if let image = player.lastSnapshot {
+        if let result = player.snapshotResult {
             VStack {
                 HStack {
                     Spacer()
                     VStack(spacing: 4) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 160)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                        Text("写真に保存しました")
-                            .font(.caption)
-                            .foregroundStyle(.white)
+                        switch result {
+                        case let .saved(image):
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            Text("写真に保存しました")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                        case let .failed(message):
+                            Label(message, systemImage: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                        }
                     }
                     .padding(8)
                     .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
@@ -318,10 +328,11 @@ private struct SnapshotToast: View {
             }
             .padding()
             .transition(.opacity)
-            .task(id: ObjectIdentifier(image)) {
+            .task(id: result) {
                 try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { return }
                 withAnimation {
-                    player.clearLastSnapshot()
+                    player.clearSnapshotResult()
                 }
             }
         }

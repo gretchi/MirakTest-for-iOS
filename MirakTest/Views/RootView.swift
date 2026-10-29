@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @State private var columnVisibility = NavigationSplitViewVisibility.automatic
     @State private var isSettingsPresented = false
@@ -35,9 +36,9 @@ struct RootView: View {
                 ContentUnavailableView("サービスを選択してください", systemImage: "tv", description: Text("左の一覧から視聴するサービスを選択します"))
             }
         }
-        .onChange(of: model.isFullscreen) { _, isFullscreen in
+        .onChange(of: isDetailOnly) { _, isDetailOnly in
             withAnimation {
-                columnVisibility = isFullscreen ? .detailOnly : .automatic
+                columnVisibility = isDetailOnly ? .detailOnly : .automatic
             }
         }
         .sheet(isPresented: $isSettingsPresented) {
@@ -60,10 +61,20 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            // バックグラウンドから復帰した時点で切断されていれば再接続する
-            if phase == .active, model.player.status == .error {
-                model.player.reload()
+            switch phase {
+            case .background:
+                model.player.enterBackground()
+            case .active:
+                // 切断されていれば再接続し、止めていた映像のデコードを再開する
+                model.player.enterForeground()
+            default:
+                break
             }
         }
+    }
+
+    /// iPad の全画面表示時と、Pro Max など横向きでもサイドバーが出る iPhone の横向き再生時はプレイヤーのみを表示する
+    private var isDetailOnly: Bool {
+        model.isFullscreen || (verticalSizeClass == .compact && model.selectedService != nil)
     }
 }

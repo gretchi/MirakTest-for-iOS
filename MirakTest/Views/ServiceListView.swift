@@ -106,6 +106,7 @@ private struct ServiceRow: View {
 struct ServiceLogo: View {
     @Environment(AppModel.self) private var model
     let service: Service
+    var width: CGFloat = 48
 
     var body: some View {
         Group {
@@ -122,7 +123,7 @@ struct ServiceLogo: View {
                     }
             }
         }
-        .frame(width: 48, height: 27)
+        .frame(width: width, height: width * 9 / 16)
         .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 }
